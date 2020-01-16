@@ -1,0 +1,20 @@
+#include <M5Stack.h>
+
+void setup()
+{
+  M5.begin();
+  M5.Lcd.setBrightness(100);
+  M5.Lcd.println("sample text");
+}
+
+void loop()
+{
+  int count = 0;
+  while (true)
+  {
+    M5.Lcd.setCursor(0, 16);
+    M5.Lcd.println(String(count));
+    count += 1;
+    delay(100);
+  }
+}
