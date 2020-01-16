@@ -1,0 +1,83 @@
+#include <M5Stack.h>
+#include <WiFi.h>
+
+const int width = 320;
+const int height = 240;
+const int fontNumber = 2;
+const int fontHeight = M5.Lcd.fontHeight(fontNumber);
+
+// 下矢印を指定の位置に描く 幅高さは3
+void drawDownTriangle(int32_t x, int32_t y)
+{
+  M5.Lcd.fillTriangle(x + 3, y - 4, x, y + 4, x - 3, y - 4, TFT_WHITE);
+}
+
+void setup()
+{
+  M5.begin(); //M5Stackオブジェクトの初期化
+  M5.Lcd.setTextColor(TFT_ORANGE);
+  M5.Lcd.setTextFont(2);
+  M5.Lcd.println("Read data and Send data. by narumincho sorena sorena");
+  M5.Lcd.setTextColor(TFT_WHITE);
+  // M5.Lcd.drawCentreString("DOWN", width / 4, height - fontHeight, 2);
+  drawDownTriangle(width / 4, height - fontHeight);
+  M5.Lcd.drawCentreString("SELECT", width * 2 / 4, height - fontHeight, 2);
+  M5.Lcd.drawCentreString("UP", width * 3 / 4, height - fontHeight, 2);
+  M5.Lcd.setCursor(0, fontHeight);
+  M5.Lcd.println("SCANNING WiFi...");
+
+  WiFi.mode(WIFI_STA); //STAモード（子機）として使用
+  WiFi.disconnect();   //Wi-Fi切断
+  delay(100);
+
+  int numberOfWiFiNetwork = WiFi.scanNetworks(); //ネットワークをスキャンして数を取得
+  M5.Lcd.println(String(numberOfWiFiNetwork) + "networks found");
+}
+
+void loop()
+{
+  M5.Lcd.setCursor(0, fontHeight * 4);
+  M5.Lcd.println(String(M5.Lcd.getRotation()));
+  // int n = WiFi.scanNetworks(); //ネットワークをスキャンして数を取得
+
+  // M5.Lcd.fillScreen(BLACK); //LCDをクリア
+  // M5.Lcd.setCursor(0, 0);   //カーソル位置設定
+
+  // if (n == 0)
+  // {
+  //   //ネットワークが見つからないとき
+  //   M5.Lcd.println("no networks found");
+  // }
+  // else
+  // {
+  //   //ネットワークが見つかったとき
+  //   M5.Lcd.print(n);
+  //   M5.Lcd.println(" networks found\n");
+  //   for (int i = 0; i < n; i++)
+  //   {
+  //     M5.Lcd.print(i + 1);
+  //     M5.Lcd.print(": ");
+  //     M5.Lcd.print(WiFi.channel(i)); //チャンネルを表示
+  //     M5.Lcd.print("CH (");
+  //     M5.Lcd.print(WiFi.RSSI(i)); //RSSI(受信信号の強度)を表示
+  //     M5.Lcd.print(")");
+  //     M5.Lcd.print((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*"); //暗号化の種類がOPENか否か
+  //     M5.Lcd.print("  ");
+  //     M5.Lcd.print(WiFi.SSID(i)); //SSID(アクセスポイントの識別名)を表示
+  //     M5.Lcd.println("");
+  //     delay(10);
+  //   }
+  // }
+
+  // while (true)
+  // {
+  //   M5.Lcd.setCursor(0, 0);
+  //   M5.update();
+  //   M5.Lcd.println("A" + String(M5.BtnA.wasPressed()));
+  //   M5.Lcd.println("B" + String(M5.BtnB.wasPressed()));
+  //   M5.Lcd.println("C" + String(M5.BtnC.wasPressed()));
+  //   delay(16);
+  // }
+
+  delay(3000);
+}

@@ -1,50 +1,73 @@
 #include <M5Stack.h>
-#include <WiFi.h>
+#include <WiFiClientSecure.h>
 
-// https://deviceplus.jp/hobby/entry_k02/
+WiFiClientSecure client;
+
+const char *ssid = "";     // WiFi SSID
+const char *password = ""; // WiFi PW
+const char *host = "us-central1-smart-house-dash.cloudfunctions.net";
+const char *path = "/api";
+
+boolean wifiConnection()
+{
+    WiFi.begin(ssid, password);
+    int count = 0;
+    Serial.print("Waiting for Wi-Fi connection");
+    while (count < 20)
+    {
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            Serial.println();
+            Serial.println("Connected!");
+            return (true);
+        }
+        delay(500);
+        M5.Lcd.print(".");
+        count++;
+    }
+    return false;
+}
+
+String httpsGet(String path)
+{
+    String data = "{\"sorena\": \"arena\"}";
+    if (client.connect(host, 443))
+    {
+        client.println("POST " + path + " HTTP/1.1");
+        client.println("host: " + String(host));
+        client.println("accept: text/html");
+        client.println("user-agent: M5 STACK FIRE program by narumincho");
+        client.println("content-type: application/json;");
+        client.println("content-length: " + String(data.length()));
+        client.println();
+        client.println(data);
+        delay(10);
+        String response = client.readString();
+        client.stop();
+        return response;
+    }
+    else
+    {
+        return "ERROR";
+    }
+}
 
 void setup()
 {
+    M5.begin();
+    M5.Lcd.setCursor(0, 0);
+    M5.Lcd.setTextColor(WHITE);
 
-  M5.begin(); //M5Stackオブジェクトの初期化
-  M5.Lcd.print("scan SSID");
-
-  WiFi.mode(WIFI_STA); //STAモード（子機）として使用
-  WiFi.disconnect();   //Wi-Fi切断
-  delay(100);
+    M5.Lcd.println("request sample");
+    if (wifiConnection())
+    {
+        M5.Lcd.println("GET to https://" + String(host) + path);
+        String response = httpsGet(path);
+        M5.Lcd.println(response);
+        M5.Lcd.println("finish!");
+    }
 }
 
 void loop()
 {
-  int n = WiFi.scanNetworks(); //ネットワークをスキャンして数を取得
-
-  M5.Lcd.fillScreen(BLACK); //LCDをクリア
-  M5.Lcd.setCursor(0, 0);   //カーソル位置設定
-
-  if (n == 0)
-  {
-    //ネットワークが見つからないとき
-    M5.Lcd.println("no networks found");
-  }
-  else
-  {
-    //ネットワークが見つかったとき
-    M5.Lcd.print(n);
-    M5.Lcd.println(" networks found\n");
-    for (int i = 0; i < n; i++)
-    {
-      M5.Lcd.print(i + 1);
-      M5.Lcd.print(": ");
-      M5.Lcd.print(WiFi.channel(i)); //チャンネルを表示
-      M5.Lcd.print("CH (");
-      M5.Lcd.print(WiFi.RSSI(i)); //RSSI(受信信号の強度)を表示
-      M5.Lcd.print(")");
-      M5.Lcd.print((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*"); //暗号化の種類がOPENか否か
-      M5.Lcd.print("  ");
-      M5.Lcd.print(WiFi.SSID(i)); //SSID(アクセスポイントの識別名)を表示
-      M5.Lcd.println("");
-      delay(10);
-    }
-  }
-  delay(3000);
 }
