@@ -1,73 +1,51 @@
 #include <M5Stack.h>
-#include <WiFiClientSecure.h>
+#include <driver/dac.h> //Arduino-ESP32 driver
 
-WiFiClientSecure client;
-
-const char *ssid = "";     // WiFi SSID
-const char *password = ""; // WiFi PW
-const char *host = "us-central1-smart-house-dash.cloudfunctions.net";
-const char *path = "/api";
-
-boolean wifiConnection()
-{
-    WiFi.begin(ssid, password);
-    int count = 0;
-    Serial.print("Waiting for Wi-Fi connection");
-    while (count < 20)
-    {
-        if (WiFi.status() == WL_CONNECTED)
-        {
-            Serial.println();
-            Serial.println("Connected!");
-            return (true);
-        }
-        delay(500);
-        M5.Lcd.print(".");
-        count++;
-    }
-    return false;
-}
-
-String httpsGet(String path)
-{
-    String data = "{\"sorena\": \"arena\"}";
-    if (client.connect(host, 443))
-    {
-        client.println("POST " + path + " HTTP/1.1");
-        client.println("host: " + String(host));
-        client.println("accept: text/html");
-        client.println("user-agent: M5 STACK FIRE program by narumincho");
-        client.println("content-type: application/json;");
-        client.println("content-length: " + String(data.length()));
-        client.println();
-        client.println(data);
-        delay(10);
-        String response = client.readString();
-        client.stop();
-        return response;
-    }
-    else
-    {
-        return "ERROR";
-    }
-}
+uint32_t beep_last_time = 0;
+uint8_t beep_volume = 20; //min 1, max 255
+uint32_t beep_total_time = 0;
 
 void setup()
 {
-    M5.begin();
-    M5.Lcd.setCursor(0, 0);
-    M5.Lcd.setTextColor(WHITE);
+    delay(2000);
+    beep_total_time = millis();
 
-    M5.Lcd.println("request sample");
-    if (wifiConnection())
-    {
-        M5.Lcd.println("GET to https://" + String(host) + path);
-        String response = httpsGet(path);
-        M5.Lcd.println(response);
-        M5.Lcd.println("finish!");
-    }
+    //これを実行すると、M5Stackスピーカーから破裂音が出る
+    dac_output_enable(DAC_CHANNEL_1); //DAC channel 1 is GPIO #25
 }
 
 void loop()
 {
+    if (millis() - beep_total_time < 10000)
+    { //10秒後にbeep音停止
+        uint32_t b_period = millis() - beep_last_time;
+        if (b_period < 500)
+        {
+            dac_output_voltage(DAC_CHANNEL_1, 0);
+            delay(1); //約500Hz
+            //delayMicroseconds(500); //約1kHz
+            dac_output_voltage(DAC_CHANNEL_1, beep_volume);
+            delay(1); //約500Hz
+                      //delayMicroseconds(500); //約1kHz
+        }
+        else if (b_period >= 500 && b_period < 1000)
+        {
+            dac_output_voltage(DAC_CHANNEL_1, 0);
+        }
+        else
+        {
+            beep_last_time = millis();
+        }
+    }
+    else
+    {
+        //これを実行するとGPIO #25のDAC outputが無効になり、スピーカーからノイズが出なくなる。
+        //ただし、次にdac_output_enableを実行する時に破裂音が出る。
+        dac_output_disable(DAC_CHANNEL_1);
+        delay(100); //10秒無音状態
+        beep_total_time = millis();
+
+        //beep音を鳴らす為にはこれが必要。ただし破裂音が出る。
+        dac_output_enable(DAC_CHANNEL_1);
+    }
 }
