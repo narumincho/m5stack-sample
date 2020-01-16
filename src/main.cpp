@@ -14,12 +14,13 @@ const uint8_t fontNumber = 2;
 const int16_t fontHeight = M5.Lcd.fontHeight(fontNumber);
 const int16_t micGraphOffset = fontHeight * 2;
 const int16_t dataTableOffset = micGraphOffset + 130;
+uint8_t toneTable[] = {0, 2, 4, 5, 7, 9, 11};
+String toneNameTable[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
 void setup()
 {
     M5.begin();
     M5.Speaker.begin();
-    M5.Speaker.setVolume(20);
 
     M5.Lcd.setBrightness(20);
     M5.Lcd.setTextFont(fontNumber);
@@ -33,10 +34,30 @@ void setup()
     mpu6050.begin();
 }
 
+void drawBar(float value, uint8_t offsetY)
+{
+    if (value < 0)
+    {
+        M5.Lcd.fillRect(
+            (displayWidth + 7 * 15) / 2 + (displayWidth - 7 * 15) * value / 2,
+            offsetY,
+            (displayWidth - 7 * 15) * -value / 2,
+            fontHeight - 1,
+            GREENYELLOW);
+        return;
+    }
+    M5.Lcd.fillRect((displayWidth + 7 * 15) / 2,
+                    offsetY,
+                    (displayWidth - 7 * 15) * value / 2,
+                    fontHeight - 1,
+                    GREENYELLOW);
+}
+
 void loop()
 {
     M5.update();
     mpu6050.update();
+    M5.Speaker.update();
 
     uint16_t micBuffer[micNumberOfSample];
     uint32_t sampling_period_us = round(1000000 * (1.0 / micSamplingFrequency));
@@ -61,24 +82,37 @@ void loop()
     M5.Lcd.setCursor(0, dataTableOffset);
     M5.Lcd.setTextColor(WHITE);
 
-    M5.Lcd.fillRect(7 * 8, dataTableOffset, 7 * 7, fontHeight, ORANGE);
+    M5.Lcd.fillRect(7 * 8, dataTableOffset, 7 * 7, fontHeight, DARKGREEN);
     M5.Lcd.printf("micSum: %7d\n", sum);
 
-    M5.Lcd.fillRect(7 * 8, dataTableOffset + fontHeight, 7 * 7, fontHeight, ORANGE);
+    M5.Lcd.fillRect(50, dataTableOffset + fontHeight * 1, displayWidth - 50, fontHeight, DARKGREEN);
     float accX = mpu6050.getAccX();
     M5.Lcd.printf("accX  : %+1.4f\n", accX);
-    M5.Lcd.fillRect((displayWidth + 7 * 15) / 2, dataTableOffset + fontHeight, (displayWidth - 7 * 15) * accX / 2, fontHeight, GREENYELLOW);
+    drawBar(accX, dataTableOffset + fontHeight);
 
     float accY = mpu6050.getAccY();
-    M5.Lcd.fillRect(7 * 8, dataTableOffset + fontHeight * 2, 7 * 7, fontHeight, ORANGE);
+    M5.Lcd.fillRect(50, dataTableOffset + fontHeight * 2, displayWidth - 50, fontHeight, DARKGREEN);
     M5.Lcd.printf("accY  : %+1.4f\n", accY);
-    M5.Lcd.fillRect((displayWidth + 7 * 15) / 2, dataTableOffset + fontHeight * 2, (displayWidth - 7 * 15) * accY / 2, fontHeight, GREENYELLOW);
+    drawBar(accY, dataTableOffset + fontHeight * 2);
 
-    float accZ = mpu6050.getAccY();
-    M5.Lcd.fillRect(7 * 8, dataTableOffset + fontHeight * 3, 7 * 7, fontHeight, ORANGE);
+    float accZ = mpu6050.getAccZ();
+    M5.Lcd.fillRect(50, dataTableOffset + fontHeight * 3, displayWidth - 50, fontHeight, DARKGREEN);
     M5.Lcd.printf("accZ  : %+1.4f\n", accZ);
-    M5.Lcd.fillRect((displayWidth + 7 * 15) / 2, dataTableOffset + fontHeight * 3, (displayWidth - 7 * 15) * accZ / 2, fontHeight, GREENYELLOW);
+    drawBar(accZ, dataTableOffset + fontHeight * 3);
 
-    M5.Speaker.tone(accZ * 1000, 16);
+    int octave = floor((1 + accX) * 7 / 2);
+    int tone = octave * 12 + toneTable[(uint8_t)floor((1 + accY) * 7 / 2)] + M5.BtnA.read() ? 1 : 0;
+
+    M5.Lcd.fillRect(0, displayHeight - fontHeight, 50, fontHeight, DARKGREEN);
+    M5.Lcd.println(toneNameTable[octave] + String(octave));
+    if (M5.BtnB.read())
+    {
+        M5.Speaker.setVolume(1);
+        M5.Speaker.tone(32.703 * pow(pow(2, (double)1 / 12), tone), 32);
+    }
+    else
+    {
+        M5.Speaker.mute();
+    }
     delay(24);
 }
