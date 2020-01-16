@@ -36,6 +36,7 @@ void setup()
 
 void drawBar(float value, uint8_t offsetY)
 {
+    value = constrain(value, -1, 1);
     if (value < 0)
     {
         M5.Lcd.fillRect(
@@ -82,33 +83,35 @@ void loop()
     M5.Lcd.setCursor(0, dataTableOffset);
     M5.Lcd.setTextColor(WHITE);
 
-    M5.Lcd.fillRect(7 * 8, dataTableOffset, 7 * 7, fontHeight, DARKGREEN);
+    M5.Lcd.fillRect(7 * 8, dataTableOffset, 7 * 7, fontHeight, NAVY);
     M5.Lcd.printf("micSum: %7d\n", sum);
 
-    M5.Lcd.fillRect(50, dataTableOffset + fontHeight * 1, displayWidth - 50, fontHeight, DARKGREEN);
+    M5.Lcd.fillRect(50, dataTableOffset + fontHeight * 1, displayWidth - 50, fontHeight, NAVY);
     float accX = mpu6050.getAccX();
     M5.Lcd.printf("accX  : %+1.4f\n", accX);
     drawBar(accX, dataTableOffset + fontHeight);
 
     float accY = mpu6050.getAccY();
-    M5.Lcd.fillRect(50, dataTableOffset + fontHeight * 2, displayWidth - 50, fontHeight, DARKGREEN);
+    M5.Lcd.fillRect(50, dataTableOffset + fontHeight * 2, displayWidth - 50, fontHeight, NAVY);
     M5.Lcd.printf("accY  : %+1.4f\n", accY);
     drawBar(accY, dataTableOffset + fontHeight * 2);
 
     float accZ = mpu6050.getAccZ();
-    M5.Lcd.fillRect(50, dataTableOffset + fontHeight * 3, displayWidth - 50, fontHeight, DARKGREEN);
+    M5.Lcd.fillRect(50, dataTableOffset + fontHeight * 3, displayWidth - 50, fontHeight, NAVY);
     M5.Lcd.printf("accZ  : %+1.4f\n", accZ);
     drawBar(accZ, dataTableOffset + fontHeight * 3);
 
-    int octave = floor((1 + accX) * 7 / 2);
-    int tone = octave * 12 + toneTable[(uint8_t)floor((1 + accY) * 7 / 2)] + M5.BtnA.read() ? 1 : 0;
+    int8_t octave = floor((1 - accY) * 7 / 2);
+    int8_t toneInOctave = toneTable[(int8_t)floor((1 - accX) * 7 / 2)] + (M5.BtnC.read() ? 1 : 0);
+    int32_t tone = octave * 12 + toneInOctave;
 
-    M5.Lcd.fillRect(0, displayHeight - fontHeight, 50, fontHeight, DARKGREEN);
-    M5.Lcd.println(toneNameTable[octave] + String(octave));
+    M5.Lcd.fillRect(0, displayHeight - fontHeight, 100, fontHeight, NAVY);
+    double frequency = 32.703 * pow(pow(2, (double)1 / 12), tone);
+    M5.Lcd.println(toneNameTable[toneInOctave] + String(octave) + " " + String(frequency) + "Hz");
     if (M5.BtnB.read())
     {
         M5.Speaker.setVolume(1);
-        M5.Speaker.tone(32.703 * pow(pow(2, (double)1 / 12), tone), 32);
+        M5.Speaker.tone(frequency, 32);
     }
     else
     {
