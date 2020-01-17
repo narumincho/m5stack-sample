@@ -2,10 +2,8 @@
 #include <MPU6050_tockn.h>
 #include <WiFiClientSecure.h>
 #include <Wire.h>
-#include <ArduinoJson.h>
 
 WiFiClientSecure client;
-StaticJsonDocument<4> jsonDoc;
 
 const char *ssid = "elecom2g-b4cd21";  // WiFi SSID
 const char *password = "dnmhjuda6wmf"; // WiFi PW
@@ -151,12 +149,8 @@ void loop()
         }
         break;
     case State::WaitRequestSend:
-        jsonDoc["micSum"] = micSum;
-        jsonDoc["accX"] = accX;
-        jsonDoc["accY"] = accY;
-        jsonDoc["axxZ"] = accZ;
-        String data;
-        serializeJson(jsonDoc, data);
+        String data = "{\"micSum\": " + String(micSum) + ", \"accX\": " + String(accX) + ", \"accY\":" + String(accY) + ", \"accZ\": " + String(accZ) + "}";
+
         const char *host = "us-central1-smart-house-dash.cloudfunctions.net";
         const char *path = "/api";
         if (client.connect(host, 443))
@@ -165,7 +159,7 @@ void loop()
             client.println("host: " + String(host));
             client.println("accept: text/html");
             client.println("user-agent: M5 STACK FIRE program by narumincho");
-            client.println("content-type: application/json;");
+            client.println("content-type: application/json");
             client.println("content-length: " + String(data.length()));
             client.println();
             client.println(data);
